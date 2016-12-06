@@ -17,7 +17,9 @@ int x_step = 1;
 int y_step = 4;
 int pen_down = 125;
 int pen_up = 180;
-double elevation = 0.0;
+
+int azimuth = 0;
+int elevation = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -27,29 +29,24 @@ void setup() {
 }
 
 //servo middle:55
-void loop() {
-  Serial.println("got here");
-  /*movePenDown();
-  delay(3000);
-  movePenUp();
-  delay(3000);*/
-  for (int i = 130; i <= 150; i += 5) {
-    pen.write(i);
-    Serial.println(i);
-    delay(3000);
-  }
-  //pen.write(140);
-  // draw line
+void loop() {  
+  /*pen.write(125);
+  delay(500);
+  pen.write(180);
+  delay(500);*/
   //drawLine(0, 0, 50, 50, false);
   //drawLine(50, 50, 0, 0, false);
-  //drawRect(0, 0, 200, 200);
+ // elevation = 60;
+ //elevation = 60;
+  //drawRect(60, 60, 120, 120);
+  
   //movePenDown();
   //delay(2000);
   //movePenUp();
   //delay(5000);
   // heart
   
-  //drawBezier(0, 0, 94, 143, 48, 75, 157, 284);
+  drawBezier(0, 0, 94, 143, 48, 75, 157, 284);
   delay(3000);
   /*drawBezier(157, 358, 265, 358, 354, 460, 354, 460);
   delay(1000);
@@ -59,40 +56,52 @@ void loop() {
   delay(3000);*/
 }
 
-
-void movePenDown() {
-  pen.write(pen_down);
+void adjustPen(bool draw) {
+  if (!draw) {
+    pen.write(180);
+    return;
+  }
+  if (elevation < 20 || elevation > 160) {
+    pen.write(125);
+  }
+  else if (elevation < 40 || elevation > 140) {
+    pen.write(130);
+  }
+  else if (elevation < 60 || elevation > 130) {
+    pen.write(132);
+  }
+  else if (elevation < 80 || elevation > 120) {
+    pen.write(142);
+  }
+  else {
+    pen.write(147);
+  }
 }
 
-void movePenUp() {
-  pen.write(pen_up);
+
+void moveToStart(int startx, int starty) {
+  drawLine(rotation, elevation, startx, starty, false);
 }
 
-void adjustPen() {
-  
-  pen.write(elevation);
-}
 
 // startx, starty, endx, endy
 // use this but set "bool draw" to false if you just want to move between points but not draw
 void drawLine(int startx, int starty, int endx, int endy, bool draw) {
- 
-  //draw ? movePenDown() : movePenUp();
-  
+
   if (startx == endx) {
     // vertical line
     if (endy > starty) {
       for (int y = starty; y < endy; y += y_calibration) {
         elevationMotor->step(y_step, FORWARD, SINGLE);
         elevation += 1;
-        Serial.println(elevation);
+        adjustPen(draw);
       }
     }
     else {
       for (int y = starty; y > endy; y -= y_calibration) {
         elevationMotor->step(y_step, BACKWARD, SINGLE);
         elevation -= 1;
-        Serial.println(elevation);
+        adjustPen(draw);
       }
     }
   }
@@ -108,24 +117,26 @@ void drawLine(int startx, int starty, int endx, int endy, bool draw) {
       double y = slope * x + intercept;
 
       if ((x - last_x) > x_calibration) {
-        rotationMotor->step(1, FORWARD, SINGLE);
+        rotationMotor->step(x_step, FORWARD, MICROSTEP);
         last_x = x;
+        rotation++;
       }
       else if ((last_x - x) > x_calibration) {
-        rotationMotor->step(1, BACKWARD, SINGLE);
+        rotationMotor->step(x_step, BACKWARD, MICROSTEP);
         last_x = x;
+        rotation--;
       }
       if ((y - last_y) > y_calibration) {
         elevationMotor->step(y_step, FORWARD, SINGLE);
         last_y = y;
         elevation += 1;
-        Serial.println(elevation);
+        adjustPen(draw);
       }
       else if ((last_y - y) > y_calibration) {
         elevationMotor->step(y_step, BACKWARD, SINGLE);
         last_y = y;
         elevation -= 1;
-        Serial.println(elevation);
+        adjustPen(draw);
       }
     }
   }
@@ -142,6 +153,8 @@ void drawRect(int cx, int cy, int width, int height) {
 
 void drawBezier(int p0x, int p0y, int p1x, int p1y, int p2x, int p2y, int p3x, int p3y) {
   Serial.println("Drawing Bezier");
+  adjustPen(true);
+  
   double last_x = 0.0;
   double last_y = 0.0;
   for (double t = 0; t < 1.0; t += 0.001) {
@@ -150,20 +163,24 @@ void drawBezier(int p0x, int p0y, int p1x, int p1y, int p2x, int p2y, int p3x, i
     if ((x - last_x) > x_calibration) {
       rotationMotor->step(x_step, FORWARD, SINGLE);
       last_x = x;
+      rotation++;
     }
     else if ((last_x - x) > x_calibration) {
       rotationMotor->step(x_step, BACKWARD, SINGLE);
       last_x = x;
+      rotation--;
     }
     if ((y - last_y) > y_calibration) {
       elevationMotor->step(y_step, FORWARD, SINGLE);
       last_y = y;
       elevation += y_step;
+      adjustPen(true);
     }
     else if ((last_y - y) > y_calibration) {
       elevationMotor->step(y_step, BACKWARD, SINGLE);
       last_y = y;
       elevation -= y_step;
+      adjustPen(true);
     }
   }
 }
