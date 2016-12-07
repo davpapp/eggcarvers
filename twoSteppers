@@ -23,6 +23,7 @@ int elevation = 0;
 
 void setup() {
   Serial.begin(9600);
+  delay(2000);
   pen.attach(9);
 
   AFMS.begin();  // create with the default frequency 1.6KHz
@@ -30,12 +31,24 @@ void setup() {
 
 //servo middle:55
 void loop() {  
-  /*pen.write(125);
-  delay(500);
-  pen.write(180);
-  delay(500);*/
-  //drawLine(0, 0, 50, 50, false);
-  //drawLine(50, 50, 0, 0, false);
+
+  moveTo(14, 46);
+  Serial.print("loc is at (");
+  Serial.print(azimuth);
+  Serial.print(",");
+  Serial.print(elevation);
+  Serial.println(")");
+  drawBezier(14, 46, 13, 60, 53, 85, 68, 48);
+  delay(1000);
+  /*
+  
+  drawRect(0, 100, 20, 20);
+  
+  moveToStart(50, 120);
+  drawRect(50, 120, 20, 20);
+
+
+  //delay(000);
  // elevation = 60;
  //elevation = 60;
   //drawRect(60, 60, 120, 120);
@@ -45,9 +58,8 @@ void loop() {
   //movePenUp();
   //delay(5000);
   // heart
-  
-  drawBezier(0, 0, 94, 143, 48, 75, 157, 284);
-  delay(3000);
+  */
+  //delay(3000);
   /*drawBezier(157, 358, 265, 358, 354, 460, 354, 460);
   delay(1000);
   drawBezier(354, 461, 354, 460, 391, 372, 480, 369);
@@ -61,33 +73,30 @@ void adjustPen(bool draw) {
     pen.write(180);
     return;
   }
-  if (elevation < 20 || elevation > 160) {
+  if (elevation < 40 || elevation > 160) {
     pen.write(125);
   }
-  else if (elevation < 40 || elevation > 140) {
+  else if (elevation < 60 || elevation > 140) {
     pen.write(130);
   }
-  else if (elevation < 60 || elevation > 130) {
-    pen.write(132);
-  }
-  else if (elevation < 80 || elevation > 120) {
-    pen.write(142);
-  }
   else {
-    pen.write(147);
+    pen.write(138);
   }
 }
 
 
-void moveToStart(int startx, int starty) {
-  drawLine(rotation, elevation, startx, starty, false);
+void moveTo(int startx, int starty) {
+  drawLine(azimuth, elevation, startx, starty, false);
 }
 
 
 // startx, starty, endx, endy
 // use this but set "bool draw" to false if you just want to move between points but not draw
 void drawLine(int startx, int starty, int endx, int endy, bool draw) {
-
+  if (draw) {
+      moveTo(startx, starty); 
+  }
+  
   if (startx == endx) {
     // vertical line
     if (endy > starty) {
@@ -107,39 +116,41 @@ void drawLine(int startx, int starty, int endx, int endy, bool draw) {
   }
 
   else {
-    double slope = (endy - starty) / (endx - startx);
-    double intercept = -startx * slope + starty; 
+    double slope = (1.0 * endy - starty) / (1.0 * endx - startx);
+    double intercept = slope * -startx + starty; 
     double last_x = 0.0;
     double last_y = 0.0;
 
-    for (double t = 0; t < 1; t += 0.001) {
+    for (double t = 0; t < 1; t += 0.0001) {
       double x = (endx - startx) * t;
       double y = slope * x + intercept;
 
       if ((x - last_x) > x_calibration) {
         rotationMotor->step(x_step, FORWARD, MICROSTEP);
         last_x = x;
-        rotation++;
+        azimuth++;
       }
       else if ((last_x - x) > x_calibration) {
         rotationMotor->step(x_step, BACKWARD, MICROSTEP);
         last_x = x;
-        rotation--;
+        azimuth--;
       }
       if ((y - last_y) > y_calibration) {
         elevationMotor->step(y_step, FORWARD, SINGLE);
         last_y = y;
-        elevation += 1;
+        elevation++;
         adjustPen(draw);
       }
       else if ((last_y - y) > y_calibration) {
         elevationMotor->step(y_step, BACKWARD, SINGLE);
         last_y = y;
-        elevation -= 1;
+        elevation--;
         adjustPen(draw);
       }
     }
   }
+  azimuth = endx;
+  elevation = endy;
 }
 
 
@@ -153,22 +164,24 @@ void drawRect(int cx, int cy, int width, int height) {
 
 void drawBezier(int p0x, int p0y, int p1x, int p1y, int p2x, int p2y, int p3x, int p3y) {
   Serial.println("Drawing Bezier");
+  
+  moveTo(p0x, p0y);
   adjustPen(true);
   
   double last_x = 0.0;
   double last_y = 0.0;
-  for (double t = 0; t < 1.0; t += 0.001) {
-    double x = pow((1-t),3)*p0x + 3*t*pow((1-t), 2)*p1x + 3*pow(t,2)*(1-t)*p2x + pow(t,3) * p3x;
-    double y = pow((1-t),3)*p0y + 3*t*pow((1-t), 2)*p1y + 3*pow(t,2)*(1-t)*p2y + pow(t,3) * p3y;
+  for (double t = 0; t < 1.0; t += 0.0001) {
+    double x = pow((1.0-t),3)*p0x + 3*t*pow((1.0-t), 2)*p1x + 3*pow(t,2)*(1-t)*p2x + pow(t,3) * p3x;
+    double y = pow((1.0-t),3)*p0y + 3*t*pow((1.0-t), 2)*p1y + 3*pow(t,2)*(1-t)*p2y + pow(t,3) * p3y;
     if ((x - last_x) > x_calibration) {
-      rotationMotor->step(x_step, FORWARD, SINGLE);
+      rotationMotor->step(x_step, FORWARD, MICROSTEP);
       last_x = x;
-      rotation++;
+      azimuth++;
     }
     else if ((last_x - x) > x_calibration) {
-      rotationMotor->step(x_step, BACKWARD, SINGLE);
+      rotationMotor->step(x_step, BACKWARD, MICROSTEP);
       last_x = x;
-      rotation--;
+      azimuth--;
     }
     if ((y - last_y) > y_calibration) {
       elevationMotor->step(y_step, FORWARD, SINGLE);
@@ -182,5 +195,8 @@ void drawBezier(int p0x, int p0y, int p1x, int p1y, int p2x, int p2y, int p3x, i
       elevation -= y_step;
       adjustPen(true);
     }
+    azimuth = p1x;
+    elevation = p1y;
+    // this  "fixes" rounding errors"
   }
 }
