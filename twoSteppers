@@ -31,20 +31,41 @@ void setup() {
 }
 
 void loop() {  
-
-  drawBezier(14, 46, 13, 60, 53, 85, 68, 48);
+  moveTo(100, 30);
+  drawLine(100, 30, 100, 140, true); // shaft
+  moveTo(100, 100);
+  drawLine(100, 100, 107, 120, true); // upper arm
+  drawLine(107, 120, 115, 150, true); // lower arm
+  moveTo(100, 100);
+  drawLine(100, 100, 93, 90, true); // upper arm
+  drawLine(100, 100, 85, 130, true); // lower arm
+  moveTo(100, 40);
+  drawLine(100, 40, 90, 20, true);
+  moveTo(100, 40);
+  drawLine(100, 40, 110, 20, true);
+  moveTo(90, 160);
+  drawBezier(90, 160, 95, 210, 105, 210, 110, 160);
+  drawBezier(110, 160, 105, 110, 95, 110, 90, 160);
+  moveTo(95, 150);
+  drawLine(95, 150, 95, 150, true);
+  moveTo(105, 150);
+  drawLine(105, 150, 105, 150, true);
+  delay(1000);
+  //drawBezier(70, 220, 130, 220, 70, 160, 130, 160);
+  
+  /*drawBezier(14, 46, 13, 60, 53, 85, 68, 48);
   Serial.print("loc is at (");
   Serial.print(azimuth);
   Serial.print(",");
   Serial.print(elevation);
-  Serial.println(")");
+  Serial.println(")");*/
   
-  drawRect(0, 100, 20, 20);
-  drawRect(50, 120, 20, 20);
+  //drawRect(0, 100, 20, 20);
+  //drawRect(50, 120, 20, 20);
 }
 
 void adjustPen(bool draw) {
-  int offset = 6;
+  int offset = -3;
   if (!draw) {
     pen.write(180);
     return;
@@ -56,16 +77,19 @@ void adjustPen(bool draw) {
     pen.write(132 + offset);
   }
   else if (elevation < 70) {
-    pen.write(135);
+    pen.write(135 + offset);
   }
   else if (elevation < 100) {
-    pen.write(140);
+    pen.write(140 + offset);
   }
   else if (elevation < 130) {
-    pen.write(134);
+    pen.write(134 + offset);
+  }
+  else if (elevation < 180) {
+    pen.write(130 + offset);
   }
   else {
-    pen.write(127);
+    pen.write(127 + offset);
   }
 }
 
