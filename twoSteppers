@@ -17,6 +17,9 @@ int x_step = 1;
 int y_step = 4;
 int pen_down = 125;
 int pen_up = 180;
+int precision = 20;
+int ymax = 200;
+int calibration[20];
 const double pi = 3.141596;
 
 int azimuth = 0;
@@ -27,103 +30,61 @@ void setup() {
   Serial.println("Starting!");
   delay(2000);
   pen.attach(9);
+  pinMode(3, OUTPUT);
+  pinMode(2, INPUT);
 
   AFMS.begin();  // create with the default frequency 1.6KHz
 }
 
 void loop() { 
-  // Center is 100, 120 
-
-
-  drawEllipse(100, 100, 20, 60);
-  /*
-  moveTo(95, 60);
-  drawRect(95, 60, 10, 90); // body 20x80
-
-  moveTo(95, 100);
-  drawLine(95, 100, 75, 120, true);
-  drawLine(75, 120, 75, 100, true); // arm
-  drawLine(75, 100, 95, 80, true); 
-
-  moveTo(105, 100);
-  drawLine(105, 100, 125, 120, true);
-  drawLine(125, 120, 125, 100, true); // right arm
-  drawLine(125, 100, 105, 80, true);
-
-  moveTo(90, 60);
-  drawLine(90, 60, 80, 30, true);
-  drawLine(80, 30, 90, 30, true);
-  drawLine(90, 30, 100, 60, true);
-  drawLine(100, 60, 110, 30, true); // legs
-  drawLine(110, 30, 120, 30, true);
-  drawLine(120, 30, 110, 60, true);
-
-  moveTo(90, 160);
-  drawBezier(90, 160, 95, 210, 105, 210, 110, 160); // head
-  drawBezier(110, 160, 105, 110, 95, 110, 90, 160);
-
-  delay (5000);*/
+  calibratePen();
+  delay(2000);
+  Serial.println("Calibration has been finished!");
   
-  /*
-  moveTo(100, 30);
-  drawLine(100, 30, 100, 140, true); // shaft
-  moveTo(100, 100);
-  drawLine(100, 100, 107, 120, true); // upper arm
-  drawLine(107, 120, 115, 150, true); // lower arm
-  moveTo(100, 100);
-  drawLine(100, 100, 93, 90, true); // upper arm
-  drawLine(100, 100, 85, 130, true); // lower arm
-  moveTo(100, 40);
-  drawLine(100, 40, 90, 20, true);
-  moveTo(100, 40);
-  drawLine(100, 40, 110, 20, true);
-  moveTo(90, 160);
-  drawBezier(90, 160, 95, 210, 105, 210, 110, 160);
-  drawBezier(110, 160, 105, 110, 95, 110, 90, 160);
-  moveTo(95, 150);
-  drawLine(95, 150, 95, 150, true);
-  moveTo(105, 150);
-  drawLine(105, 150, 105, 150, true);*/
-  delay(1000);
-  //drawBezier(70, 220, 130, 220, 70, 160, 130, 160);
+  delay (5000);
+  Serial.println("Done drawing!");
+}
+
+void calibratePen() {
+  int offset = 5;
+  digitalWrite(3, HIGH);
+  int sensorRead = digitalRead(2);
   
-  /*drawBezier(14, 46, 13, 60, 53, 85, 68, 48);
-  Serial.print("loc is at (");
-  Serial.print(azimuth);
-  Serial.print(",");
-  Serial.print(elevation);
-  Serial.println(")");*/
-  
-  //drawRect(0, 100, 20, 20);
-  //drawRect(50, 120, 20, 20);
+  for (int i = 0; i < precision; i++) {
+    pen.write(180);
+    moveTo(0, i * ymax / precision);
+
+    int depth = 180;
+    while (sensorRead == HIGH) {
+      digitalWrite(3, HIGH);
+      sensorRead = digitalRead(2);
+      pen.write(depth);
+      depth--;
+      delay(50);
+    }
+    calibration[i] = depth + offset;
+    Serial.print("Latitude ");
+    Serial.print(i * ymax / precision);
+    Serial.print(": ");
+    Serial.println(depth);
+    pen.write(180);
+    delay(200);
+    digitalWrite(3, HIGH);
+    sensorRead = digitalRead(2);
+    delay(200);
+  }
 }
 
 void adjustPen(bool draw) {
-  int offset = -3;
   if (!draw) {
     pen.write(180);
     return;
   }
-  if (elevation < 30) {
-    pen.write(128 + offset);
-  }
-  else if (elevation < 50) {
-    pen.write(132 + offset);
-  }
-  else if (elevation < 70) {
-    pen.write(135 + offset);
-  }
-  else if (elevation < 100) {
-    pen.write(140 + offset);
-  }
-  else if (elevation < 130) {
-    pen.write(134 + offset);
-  }
-  else if (elevation < 180) {
-    pen.write(130 + offset);
-  }
-  else {
-    pen.write(127 + offset);
+  for (int i = 0; i < precision; i++) {
+    if (elevation < i * ymax / precision) {
+      pen.write(calibration[i]);
+      return;
+    }
   }
 }
 
